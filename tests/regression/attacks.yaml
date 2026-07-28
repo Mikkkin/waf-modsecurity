@@ -19,6 +19,8 @@ tests:
             Accept: "*/*"
         output:
           status: 403
+          log:
+            expect_ids: [942100, 949110]
   - test_id: 2
     desc: "SQLi: UNION SELECT из таблицы Users"
     stages:
@@ -32,6 +34,8 @@ tests:
             Accept: "*/*"
         output:
           status: 403
+          log:
+            expect_ids: [949110]
   - test_id: 3
     desc: "SQLi: обход аутентификации в теле JSON"
     stages:
@@ -46,6 +50,8 @@ tests:
           data: '{"email":"'' OR 1=1--","password":"x"}'
         output:
           status: 403
+          log:
+            expect_ids: [949110]
   - test_id: 4
     desc: "XSS: iframe с javascript-схемой в параметре поиска"
     stages:
@@ -59,6 +65,8 @@ tests:
             Accept: "*/*"
         output:
           status: 403
+          log:
+            expect_ids: [949110]
   - test_id: 5
     desc: "XSS: обработчик события в теге img"
     stages:
@@ -72,6 +80,8 @@ tests:
             Accept: "*/*"
         output:
           status: 403
+          log:
+            expect_ids: [949110]
   - test_id: 6
     desc: "Path traversal к системному файлу"
     stages:
@@ -85,6 +95,8 @@ tests:
             Accept: "*/*"
         output:
           status: 403
+          log:
+            expect_ids: [930110, 949110]
   - test_id: 7
     desc: "Инъекция команд ОС в параметре поиска"
     stages:
@@ -98,6 +110,8 @@ tests:
             Accept: "*/*"
         output:
           status: 403
+          log:
+            expect_ids: [949110]
   - test_id: 8
     desc: "Детект сканера по User-Agent"
     stages:
@@ -111,6 +125,8 @@ tests:
             Accept: "*/*"
         output:
           status: 403
+          log:
+            expect_ids: [913100, 949110]
   - test_id: 9
     desc: "Инъекция SQL в заголовке Cookie"
     stages:
@@ -125,6 +141,8 @@ tests:
             Cookie: "sid=' OR 1=1--"
         output:
           status: 403
+          log:
+            expect_ids: [942100, 949110]
   - test_id: 10
     desc: "NoSQL-инъекция оператором сравнения в теле"
     stages:
@@ -139,3 +157,6 @@ tests:
           data: '{"id":{"$ne":-1},"message":"pwned"}'
         output:
           status: 403
+          log:
+            expect_ids: [942290, 949110]
+            no_expect_ids: [911100]

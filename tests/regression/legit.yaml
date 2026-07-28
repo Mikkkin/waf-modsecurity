@@ -19,6 +19,8 @@ tests:
             Accept: "text/html,application/xhtml+xml"
         output:
           status: 200
+          log:
+            no_expect_ids: [949110]
   - test_id: 2
     desc: "Поиск товара по обычному слову"
     stages:
@@ -32,6 +34,8 @@ tests:
             Accept: "application/json"
         output:
           status: 200
+          log:
+            no_expect_ids: [949110]
   - test_id: 3
     desc: "Поиск со знаком процента"
     stages:
@@ -45,6 +49,8 @@ tests:
             Accept: "application/json"
         output:
           status: 200
+          log:
+            no_expect_ids: [949110]
   - test_id: 4
     desc: "Поиск с ключевым словом select внутри обычной фразы"
     stages:
@@ -58,6 +64,8 @@ tests:
             Accept: "application/json"
         output:
           status: 200
+          log:
+            no_expect_ids: [949110]
   - test_id: 5
     desc: "Поиск со словом role в запросе не должен ловиться виртуальным патчем VP2"
     stages:
@@ -71,6 +79,8 @@ tests:
             Accept: "application/json"
         output:
           status: 200
+          log:
+            no_expect_ids: [949110]
   - test_id: 6
     desc: "Карточка товара по идентификатору"
     stages:
@@ -84,6 +94,8 @@ tests:
             Accept: "application/json"
         output:
           status: 200
+          log:
+            no_expect_ids: [949110]
   - test_id: 7
     desc: "Отзывы о товаре"
     stages:
@@ -97,6 +109,8 @@ tests:
             Accept: "application/json"
         output:
           status: 200
+          log:
+            no_expect_ids: [949110]
   - test_id: 8
     desc: "Версия приложения"
     stages:
@@ -110,6 +124,8 @@ tests:
             Accept: "application/json"
         output:
           status: 200
+          log:
+            no_expect_ids: [949110]
   - test_id: 9
     desc: "Статический ресурс SPA"
     stages:
@@ -123,6 +139,8 @@ tests:
             Accept: "*/*"
         output:
           status: 200
+          log:
+            no_expect_ids: [949110]
   - test_id: 10
     desc: "Разрешённый файл в каталоге ftp"
     stages:
@@ -136,3 +154,5 @@ tests:
             Accept: "*/*"
         output:
           status: 200
+          log:
+            no_expect_ids: [949110]

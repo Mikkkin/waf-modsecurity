@@ -40,6 +40,15 @@ jobs:
           curl -sS -o /dev/null -w 'инъекция:       %{http_code}\n' \
             'http://127.0.0.1/rest/products/search?q=%27%29%29--'
 
+      # go-ftw в режиме по умолчанию читает audit-лог, чтобы проверить, какое
+      # правило сработало. nginx кладет его с правами 0640 www-data:adm,
+      # а сборка работает не от www-data.
+      - name: Дать доступ к журналу
+        run: |
+          sudo chmod 755 /var/log/modsec
+          sudo chmod a+r /var/log/modsec/audit.log
+          ls -l /var/log/modsec/audit.log
+
       - name: go-ftw ${{ env.GO_FTW_VERSION }}
         run: |
           curl -fsSL "https://github.com/coreruleset/go-ftw/releases/download/v${GO_FTW_VERSION}/ftw_${GO_FTW_VERSION}_linux_amd64.tar.gz" \
@@ -65,6 +74,18 @@ jobs:
             echo "ожидалось ${expected} тестов, выполнено меньше" >&2
             exit 1
           }
+
+      # Если регрессия упала, первым делом надо знать, какие правила реально
+      # сработали. Иначе гадать по коду ответа.
+      - name: Что сработало в журнале
+        if: failure()
+        run: |
+          sudo grep -ao '{"transaction".*}' /var/log/modsec/audit.log \
+            | jq -rR 'fromjson? // empty
+                | .transaction
+                | select((.messages // []) | length > 0)
+                | [.request.uri, ([.messages[].details.ruleId] | join(","))]
+                | @tsv' | tail -60
 
       - name: Открыть логи для выгрузки
         if: always()

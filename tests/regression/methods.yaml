@@ -21,6 +21,8 @@ tests:
           data: '{"quantity":3}'
         output:
           status: 401
+          log:
+            no_expect_ids: [911100, 949110]
   - test_id: 2
     desc: "PATCH на отзыв проходит через WAF"
     stages:
@@ -36,6 +38,8 @@ tests:
           data: '{"id":"6427b8b8f8b1a4001f2b3c4d","message":"Fresh and tasty"}'
         output:
           status: 401
+          log:
+            no_expect_ids: [911100, 949110]
   - test_id: 3
     desc: "DELETE на позицию корзины проходит через WAF"
     stages:
@@ -50,3 +54,5 @@ tests:
             Authorization: "Bearer lab-invalid-token"
         output:
           status: 401
+          log:
+            no_expect_ids: [911100, 949110]

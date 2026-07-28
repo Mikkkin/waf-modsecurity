@@ -19,6 +19,8 @@ tests:
             Accept: "*/*"
         output:
           status: 403
+          log:
+            expect_ids: [20001]
   - test_id: 2
     desc: "VP1: Poison Null Byte к пасхальному яйцу"
     stages:
@@ -32,6 +34,8 @@ tests:
             Accept: "*/*"
         output:
           status: 403
+          log:
+            expect_ids: [20001]
   - test_id: 3
     desc: "VP1: двойное кодирование нулевого байта"
     stages:
@@ -45,6 +49,8 @@ tests:
             Accept: "*/*"
         output:
           status: 403
+          log:
+            expect_ids: [20001]
   - test_id: 4
     desc: "VP2: назначение роли admin при регистрации"
     stages:
@@ -59,6 +65,8 @@ tests:
           data: '{"email":"adm1n@lab.test","password":"Str0ngLabP4ss","role":"admin"}'
         output:
           status: 403
+          log:
+            expect_ids: [20002]
   - test_id: 5
     desc: "VP3: смена пароля без указания текущего"
     stages:
@@ -72,6 +80,8 @@ tests:
             Accept: "application/json"
         output:
           status: 403
+          log:
+            expect_ids: [20003]
   - test_id: 6
     desc: "VP3 не мешает штатной смене пароля: ответ приходит от приложения, а не 403 от WAF"
     stages:
@@ -86,3 +96,5 @@ tests:
             Authorization: "Bearer lab-invalid-token"
         output:
           status: 500
+          log:
+            no_expect_ids: [20003, 949110]

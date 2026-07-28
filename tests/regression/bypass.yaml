@@ -19,6 +19,8 @@ tests:
             Accept: "application/json"
         output:
           status: 403
+          log:
+            expect_ids: [12001, 949110]
   - test_id: 2
     desc: "Обход через оператор GLOB в нижнем регистре"
     stages:
@@ -32,6 +34,8 @@ tests:
             Accept: "application/json"
         output:
           status: 403
+          log:
+            expect_ids: [12001, 949110]
   - test_id: 3
     desc: "Обход через COLLATE NOCASE"
     stages:
@@ -45,6 +49,8 @@ tests:
             Accept: "application/json"
         output:
           status: 403
+          log:
+            expect_ids: [12001, 949110]
   - test_id: 4
     desc: "Обход через GLOB по имени колонки"
     stages:
@@ -58,6 +64,8 @@ tests:
             Accept: "application/json"
         output:
           status: 403
+          log:
+            expect_ids: [12001, 949110]
   - test_id: 5
     desc: "Обход через оператор MATCH"
     stages:
@@ -71,6 +79,8 @@ tests:
             Accept: "application/json"
         output:
           status: 403
+          log:
+            expect_ids: [12001, 949110]
   - test_id: 6
     desc: "Обход через GLOB с функцией zeroblob"
     stages:
@@ -84,6 +94,8 @@ tests:
             Accept: "application/json"
         output:
           status: 403
+          log:
+            expect_ids: [12001, 949110]
   - test_id: 7
     desc: "Слово match в обычной фразе не должно блокироваться правилом 12001"
     stages:
@@ -97,6 +109,8 @@ tests:
             Accept: "application/json"
         output:
           status: 200
+          log:
+            no_expect_ids: [12001, 949110]
   - test_id: 8
     desc: "Слово match перед скобкой не должно блокироваться правилом 12001"
     stages:
@@ -110,3 +124,5 @@ tests:
             Accept: "application/json"
         output:
           status: 200
+          log:
+            no_expect_ids: [12001, 949110]
