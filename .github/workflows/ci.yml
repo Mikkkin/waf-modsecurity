@@ -1,0 +1,98 @@
+name: WAF regression
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GO_FTW_VERSION: '2.5.0'
+
+jobs:
+  waf:
+    name: nginx + ModSecurity + CRS
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Развернуть WAF
+        run: sudo ./deploy.sh --origin 127.0.0.1:3000 --mode On
+
+      - name: Заглушка вместо приложения
+        run: |
+          sudo cp ci/stub-origin.conf /etc/nginx/sites-enabled/stub-origin.conf
+          sudo nginx -t
+          sudo systemctl reload nginx
+
+      - name: Дым
+        run: |
+          for i in $(seq 1 30); do
+            [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/)" = "200" ] && break
+            sleep 1
+          done
+          curl -sS -o /dev/null -w 'обычный запрос: %{http_code}\n' \
+            'http://127.0.0.1/rest/products/search?q=apple'
+          curl -sS -o /dev/null -w 'инъекция:       %{http_code}\n' \
+            'http://127.0.0.1/rest/products/search?q=%27%29%29--'
+
+      - name: go-ftw ${{ env.GO_FTW_VERSION }}
+        run: |
+          curl -fsSL "https://github.com/coreruleset/go-ftw/releases/download/v${GO_FTW_VERSION}/ftw_${GO_FTW_VERSION}_linux_amd64.tar.gz" \
+            | tar -xzf - ftw
+          sudo install -m0755 ftw /usr/local/bin/ftw
+          ftw --version
+
+      - name: Разбор тестов
+        run: |
+          set -o pipefail
+          ftw check -d tests/regression 2>&1 | tee /tmp/check.log
+          if grep -q 'WRN' /tmp/check.log; then
+            echo "какой-то файл тестов не разобрался" >&2
+            exit 1
+          fi
+
+      - name: Регрессия
+        run: |
+          set -o pipefail
+          ftw run -d tests/regression --config tests/ftw-ci.yaml 2>&1 | tee /tmp/run.log
+          expected=$(grep -c '^  - test_id:' tests/regression/*.yaml | awk -F: '{s+=$2} END {print s}')
+          grep -qE "run ${expected} total tests" /tmp/run.log || {
+            echo "ожидалось ${expected} тестов, выполнено меньше" >&2
+            exit 1
+          }
+
+      - name: Открыть логи для выгрузки
+        if: always()
+        run: sudo chmod -R a+rX /var/log/modsec /var/log/nginx || true
+
+      - name: Забрать audit-лог
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: modsec-audit-log
+          path: |
+            /var/log/modsec/audit.log
+            /var/log/nginx/waf-error.log
+          if-no-files-found: warn
+          retention-days: 7
+
+  lint:
+    name: Линтеры
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: shellcheck
+        run: shellcheck -x -e SC2016 -P traffic traffic/*.sh analysis/*.sh deploy.sh
+
+      - name: yamllint
+        run: |
+          pipx install yamllint
+          yamllint -d relaxed tests .github

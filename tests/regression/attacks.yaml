@@ -1,0 +1,141 @@
+---
+meta:
+  author: "waf-lab"
+  enabled: true
+  name: "attacks.yaml"
+  description: "Вредоносный трафик обязан блокироваться с кодом 403"
+rule_id: 942100
+tests:
+  - test_id: 1
+    desc: "SQLi: закрывающие скобки и комментарий в параметре поиска"
+    stages:
+      - description: "sqli-christmas-special"
+        input:
+          method: "GET"
+          uri: "/rest/products/search?q=%27%29%29--"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "*/*"
+        output:
+          status: 403
+  - test_id: 2
+    desc: "SQLi: UNION SELECT из таблицы Users"
+    stages:
+      - description: "sqli-union-users"
+        input:
+          method: "GET"
+          uri: "/rest/products/search?q=qwert%27%29%29%20UNION%20SELECT%20id%2C%20email%2C%20password%2C%20%274%27%2C%20%275%27%2C%20%276%27%2C%20%277%27%2C%20%278%27%2C%20%279%27%20FROM%20Users--"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "*/*"
+        output:
+          status: 403
+  - test_id: 3
+    desc: "SQLi: обход аутентификации в теле JSON"
+    stages:
+      - description: "sqli-login-bypass"
+        input:
+          method: "POST"
+          uri: "/rest/user/login"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Content-Type: "application/json"
+          data: '{"email":"'' OR 1=1--","password":"x"}'
+        output:
+          status: 403
+  - test_id: 4
+    desc: "XSS: iframe с javascript-схемой в параметре поиска"
+    stages:
+      - description: "xss-iframe"
+        input:
+          method: "GET"
+          uri: "/rest/products/search?q=%3Ciframe%20src%3D%22javascript%3Aalert%28%60xss%60%29%22%3E"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "*/*"
+        output:
+          status: 403
+  - test_id: 5
+    desc: "XSS: обработчик события в теге img"
+    stages:
+      - description: "xss-img-onerror"
+        input:
+          method: "GET"
+          uri: "/rest/products/search?q=%3Cimg%20src%3Dx%20onerror%3Dalert%28document.cookie%29%3E"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "*/*"
+        output:
+          status: 403
+  - test_id: 6
+    desc: "Path traversal к системному файлу"
+    stages:
+      - description: "lfi-etc-passwd"
+        input:
+          method: "GET"
+          uri: "/rest/products/search?q=..%2F..%2F..%2F..%2Fetc%2Fpasswd"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "*/*"
+        output:
+          status: 403
+  - test_id: 7
+    desc: "Инъекция команд ОС в параметре поиска"
+    stages:
+      - description: "rce-shell-metachars"
+        input:
+          method: "GET"
+          uri: "/rest/products/search?q=%3Bcat%20%2Fetc%2Fpasswd"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "*/*"
+        output:
+          status: 403
+  - test_id: 8
+    desc: "Детект сканера по User-Agent"
+    stages:
+      - description: "scanner-ua-sqlmap"
+        input:
+          method: "GET"
+          uri: "/"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "sqlmap/1.10.4#stable (https://sqlmap.org)"
+            Accept: "*/*"
+        output:
+          status: 403
+  - test_id: 9
+    desc: "Инъекция SQL в заголовке Cookie"
+    stages:
+      - description: "sqli-in-cookie"
+        input:
+          method: "GET"
+          uri: "/"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "*/*"
+            Cookie: "sid=' OR 1=1--"
+        output:
+          status: 403
+  - test_id: 10
+    desc: "NoSQL-инъекция оператором сравнения в теле"
+    stages:
+      - description: "nosql-ne"
+        input:
+          method: "PATCH"
+          uri: "/rest/products/reviews"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Content-Type: "application/json"
+          data: '{"id":{"$ne":-1},"message":"pwned"}'
+        output:
+          status: 403

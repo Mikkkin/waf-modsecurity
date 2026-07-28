@@ -1,0 +1,52 @@
+---
+meta:
+  author: "waf-lab"
+  enabled: true
+  name: "methods.yaml"
+  description: "PUT, PATCH и DELETE доходят до приложения; 401 приходит от Juice Shop, а не 403 от WAF"
+rule_id: 911100
+tests:
+  - test_id: 1
+    desc: "PUT на позицию корзины проходит через WAF"
+    stages:
+      - description: "basket-put"
+        input:
+          method: "PUT"
+          uri: "/api/BasketItems/1"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36"
+            Content-Type: "application/json"
+            Authorization: "Bearer lab-invalid-token"
+          data: '{"quantity":3}'
+        output:
+          status: 401
+  - test_id: 2
+    desc: "PATCH на отзыв проходит через WAF"
+    stages:
+      - description: "review-patch"
+        input:
+          method: "PATCH"
+          uri: "/rest/products/reviews"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36"
+            Content-Type: "application/json"
+            Authorization: "Bearer lab-invalid-token"
+          data: '{"id":"6427b8b8f8b1a4001f2b3c4d","message":"Fresh and tasty"}'
+        output:
+          status: 401
+  - test_id: 3
+    desc: "DELETE на позицию корзины проходит через WAF"
+    stages:
+      - description: "basket-delete"
+        input:
+          method: "DELETE"
+          uri: "/api/BasketItems/1"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36"
+            Accept: "application/json"
+            Authorization: "Bearer lab-invalid-token"
+        output:
+          status: 401

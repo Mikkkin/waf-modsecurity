@@ -1,0 +1,8 @@
+---
+mode: 'cloud'
+
+testoverride:
+  input:
+    dest_addr: '192.168.122.10'
+    port: 80
+    protocol: 'http'

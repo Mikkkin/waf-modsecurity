@@ -1,0 +1,88 @@
+---
+meta:
+  author: "waf-lab"
+  enabled: true
+  name: "virtual-patches.yaml"
+  description: "Виртуальные патчи 20001-20003 закрывают уязвимости, невидимые для базового CRS"
+rule_id: 20001
+tests:
+  - test_id: 1
+    desc: "VP1: Poison Null Byte к резервной копии купонов"
+    stages:
+      - description: "null-byte-coupons"
+        input:
+          method: "GET"
+          uri: "/ftp/coupons_2013.md.bak%2500.md"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "*/*"
+        output:
+          status: 403
+  - test_id: 2
+    desc: "VP1: Poison Null Byte к пасхальному яйцу"
+    stages:
+      - description: "null-byte-easteregg"
+        input:
+          method: "GET"
+          uri: "/ftp/eastere.gg%2500.md"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "*/*"
+        output:
+          status: 403
+  - test_id: 3
+    desc: "VP1: двойное кодирование нулевого байта"
+    stages:
+      - description: "null-byte-double-encoded"
+        input:
+          method: "GET"
+          uri: "/ftp/package.json.bak%25252500.md"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "*/*"
+        output:
+          status: 403
+  - test_id: 4
+    desc: "VP2: назначение роли admin при регистрации"
+    stages:
+      - description: "mass-assignment-role"
+        input:
+          method: "POST"
+          uri: "/api/Users"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Content-Type: "application/json"
+          data: '{"email":"adm1n@lab.test","password":"Str0ngLabP4ss","role":"admin"}'
+        output:
+          status: 403
+  - test_id: 5
+    desc: "VP3: смена пароля без указания текущего"
+    stages:
+      - description: "change-password-no-current"
+        input:
+          method: "GET"
+          uri: "/rest/user/change-password?new=slurmCl4ssic&repeat=slurmCl4ssic"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "application/json"
+        output:
+          status: 403
+  - test_id: 6
+    desc: "VP3 не мешает штатной смене пароля: ответ приходит от приложения, а не 403 от WAF"
+    stages:
+      - description: "change-password-with-current"
+        input:
+          method: "GET"
+          uri: "/rest/user/change-password?current=old1&new=slurmCl4ssic&repeat=slurmCl4ssic"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "application/json"
+            Authorization: "Bearer lab-invalid-token"
+        output:
+          status: 500

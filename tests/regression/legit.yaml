@@ -1,0 +1,138 @@
+---
+meta:
+  author: "waf-lab"
+  enabled: true
+  name: "legit.yaml"
+  description: "Легитимный неавторизованный трафик обязан проходить с кодом 200"
+rule_id: 949110
+tests:
+  - test_id: 1
+    desc: "Витрина магазина"
+    stages:
+      - description: "storefront"
+        input:
+          method: "GET"
+          uri: "/"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36"
+            Accept: "text/html,application/xhtml+xml"
+        output:
+          status: 200
+  - test_id: 2
+    desc: "Поиск товара по обычному слову"
+    stages:
+      - description: "search-plain"
+        input:
+          method: "GET"
+          uri: "/rest/products/search?q=apple"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36"
+            Accept: "application/json"
+        output:
+          status: 200
+  - test_id: 3
+    desc: "Поиск со знаком процента"
+    stages:
+      - description: "search-percent"
+        input:
+          method: "GET"
+          uri: "/rest/products/search?q=100%25%20organic"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36"
+            Accept: "application/json"
+        output:
+          status: 200
+  - test_id: 4
+    desc: "Поиск с ключевым словом select внутри обычной фразы"
+    stages:
+      - description: "search-word-select"
+        input:
+          method: "GET"
+          uri: "/rest/products/search?q=select%20the%20best%20juice"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36"
+            Accept: "application/json"
+        output:
+          status: 200
+  - test_id: 5
+    desc: "Поиск со словом role в запросе не должен ловиться виртуальным патчем VP2"
+    stages:
+      - description: "search-word-role"
+        input:
+          method: "GET"
+          uri: "/rest/products/search?q=role"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36"
+            Accept: "application/json"
+        output:
+          status: 200
+  - test_id: 6
+    desc: "Карточка товара по идентификатору"
+    stages:
+      - description: "product-detail"
+        input:
+          method: "GET"
+          uri: "/api/Products/1"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36"
+            Accept: "application/json"
+        output:
+          status: 200
+  - test_id: 7
+    desc: "Отзывы о товаре"
+    stages:
+      - description: "product-reviews"
+        input:
+          method: "GET"
+          uri: "/rest/products/1/reviews"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36"
+            Accept: "application/json"
+        output:
+          status: 200
+  - test_id: 8
+    desc: "Версия приложения"
+    stages:
+      - description: "application-version"
+        input:
+          method: "GET"
+          uri: "/rest/admin/application-version"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36"
+            Accept: "application/json"
+        output:
+          status: 200
+  - test_id: 9
+    desc: "Статический ресурс SPA"
+    stages:
+      - description: "spa-bundle"
+        input:
+          method: "GET"
+          uri: "/main.js"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36"
+            Accept: "*/*"
+        output:
+          status: 200
+  - test_id: 10
+    desc: "Разрешённый файл в каталоге ftp"
+    stages:
+      - description: "ftp-allowed-file"
+        input:
+          method: "GET"
+          uri: "/ftp/acquisitions.md"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36"
+            Accept: "*/*"
+        output:
+          status: 200

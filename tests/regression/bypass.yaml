@@ -1,0 +1,112 @@
+---
+meta:
+  author: "waf-lab"
+  enabled: true
+  name: "bypass.yaml"
+  description: "Правило 12001 закрывает обход CRS на операторах SQLite, не ломая легитимный поиск"
+rule_id: 12001
+tests:
+  - test_id: 1
+    desc: "Обход через оператор GLOB"
+    stages:
+      - description: "glob-tautology"
+        input:
+          method: "GET"
+          uri: "/rest/products/search?q=%27%29%29%20OR%20%271%27%20GLOB%20%271%27%20--"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "application/json"
+        output:
+          status: 403
+  - test_id: 2
+    desc: "Обход через оператор GLOB в нижнем регистре"
+    stages:
+      - description: "glob-lowercase"
+        input:
+          method: "GET"
+          uri: "/rest/products/search?q=%27%29%29%20or%20%271%27%20glob%20%271%27%20--"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "application/json"
+        output:
+          status: 403
+  - test_id: 3
+    desc: "Обход через COLLATE NOCASE"
+    stages:
+      - description: "collate-nocase"
+        input:
+          method: "GET"
+          uri: "/rest/products/search?q=%27%29%29%20OR%20%271%27%20COLLATE%20NOCASE%20--"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "application/json"
+        output:
+          status: 403
+  - test_id: 4
+    desc: "Обход через GLOB по имени колонки"
+    stages:
+      - description: "glob-column"
+        input:
+          method: "GET"
+          uri: "/rest/products/search?q=%27%29%29%20OR%20name%20GLOB%20%27%2A%27%20--"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "application/json"
+        output:
+          status: 403
+  - test_id: 5
+    desc: "Обход через оператор MATCH"
+    stages:
+      - description: "match-tautology"
+        input:
+          method: "GET"
+          uri: "/rest/products/search?q=%27%29%29%20OR%20%271%27%20MATCH%20%271%27%20--"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "application/json"
+        output:
+          status: 403
+  - test_id: 6
+    desc: "Обход через GLOB с функцией zeroblob"
+    stages:
+      - description: "glob-zeroblob"
+        input:
+          method: "GET"
+          uri: "/rest/products/search?q=%27%29%29%20OR%20%271%27%20GLOB%20zeroblob%281%29%20--"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "application/json"
+        output:
+          status: 403
+  - test_id: 7
+    desc: "Слово match в обычной фразе не должно блокироваться правилом 12001"
+    stages:
+      - description: "legit-word-match"
+        input:
+          method: "GET"
+          uri: "/rest/products/search?q=a%20match%20for%20juice"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "application/json"
+        output:
+          status: 200
+  - test_id: 8
+    desc: "Слово match перед скобкой не должно блокироваться правилом 12001"
+    stages:
+      - description: "legit-match-paren"
+        input:
+          method: "GET"
+          uri: "/rest/products/search?q=perfect%20match%20for%20me"
+          headers:
+            Host: "waf.lab"
+            User-Agent: "ftw-lab"
+            Accept: "application/json"
+        output:
+          status: 200

@@ -1,0 +1,90 @@
+# waf-modsecurity
+
+[![WAF regression](https://github.com/Mikkkin/waf-modsecurity/actions/workflows/ci.yml/badge.svg)](https://github.com/Mikkkin/waf-modsecurity/actions/workflows/ci.yml)
+
+## Топология
+
+```
+attacker                    waf                        app
+Parrot OS 7.3        nginx + ModSecurity          Juice Shop 20.1.1
+192.168.122.30  -->  .122.10 | .130.10  -->  192.168.130.20:3000
+   WAN 192.168.122.0/24         LAN 192.168.130.0/24
+```
+
+## Что где лежит
+
+```
+waf/        modsecurity.conf, crs-setup-lab.conf, modsec-main.conf
+            nftables.conf, nginx/waf.conf
+            rules/  четыре файла собственных правил
+app/        juice-shop.service, nftables.conf
+traffic/    генератор трафика: legit.sh, attack.sh, run-all.sh, lib.sh
+analysis/   analyze.sh - разбор audit-лога через jq
+tests/      37 регрессионных тестов go-ftw
+ci/         заглушка origin для сборки
+Makefile    управление стендом по SSH
+deploy.sh   развертывание WAF одной командой
+```
+
+Собственные правила пронумерованы из локального диапазона `1-99999`:
+`10000-10002` уровень паранойи и пороги, `10010-10013` тюнинг и исключения,
+`12001` защита от обхода, `20001-20003` виртуальные патчи,
+`200000-200007` служебные правила движка.
+
+## Как пользоваться
+
+Конфиги раскладываются по узлу `waf`: `waf/*.conf` в `/etc/nginx/modsec/`,
+`waf/rules/*` в `/etc/crs4/rules/`, `waf/nginx/waf.conf` в `sites-available`.
+Порядок загрузки задается именем файла, `REQUEST-900-*` обязан идти раньше `REQUEST-901-*`.
+
+Каталог `traffic/` копируется на атакующий узел:
+
+```bash
+WAF=http://waf.lab RUN_ID=detect-01 ./run-all.sh              # два набора запросов
+WITH_TOOLS=1 WAF=http://waf.lab RUN_ID=detect-01 ./run-all.sh # плюс nikto, ffuf, sqlmap
+```
+
+Каждый запрос помечается заголовками `X-Lab-Run`, `X-Lab-Case` и `X-Lab-Class`.
+Без такой разметки журнал, куда за один прогон сканера падает семь тысяч записей,
+разобрать нереально. На узле `waf`:
+
+```bash
+RUN=detect-01 ./analyze.sh top     # какие правила сработали и сколько раз
+RUN=detect-01 ./analyze.sh fp      # класс трафика | случай | запрос | правило | код
+RUN=detect-01 ./analyze.sh clean   # легитимные запросы без единого срабатывания
+./analyze.sh rule 911100           # транзакция целиком по id правила
+```
+
+## Тесты и автоматизация
+
+На каждый push GitHub Actions поднимает WAF с нуля на чистой машине: ставит nginx и
+ModSecurity из пакетов, качает CRS 4.28.0 с проверкой подписи GPG, раскладывает
+конфигурацию из этого репозитория и прогоняет **37 регрессионных тестов** через
+[go-ftw](https://github.com/coreruleset/go-ftw).
+
+Тесты разложены по смыслу: атаки обязаны блокироваться, легитимные запросы проходить,
+виртуальные патчи и правило 12001 срабатывать, разрешенные методы не отклоняться.
+Если очередная правка исключений ослабит защиту, сборка покраснеет. Audit-лог каждой
+сборки выгружается артефактом.
+
+Приложение в сборке подменяется заглушкой: проверяется поведение WAF, а не Juice Shop.
+
+Развернуть WAF на чистой машине - один скрипт, он же используется в сборке:
+
+```bash
+sudo ./deploy.sh                       # ставит пакеты, CRS, раскладывает конфиг
+sudo ./deploy.sh --mode DetectionOnly  # сразу в режиме мониторинга
+```
+
+Стендом можно управлять из Makefile по SSH, без агентов на узлах:
+
+```bash
+make deploy                       # разложить конфигурацию и генератор трафика
+make block                        # SecRuleEngine On
+make traffic RUN_ID=block-01      # прогнать оба набора
+make fp RUN=block-01              # разбор срабатываний
+make test                         # те же 37 тестов против живого стенда
+```
+
+`make help` покажет остальное: переключение уровня паранойи, включение и отключение
+правила 12001, очистку журнала.

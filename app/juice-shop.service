@@ -1,0 +1,34 @@
+[Unit]
+Description=OWASP Juice Shop
+Documentation=https://owasp.org/www-project-juice-shop/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=juiceshop
+Group=juiceshop
+WorkingDirectory=/opt/juice-shop
+Environment=PORT=3000
+ExecStart=/usr/bin/node /opt/juice-shop/build/app.js
+Restart=on-failure
+RestartSec=5s
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=full
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+ReadWritePaths=/opt/juice-shop/data /opt/juice-shop/logs /opt/juice-shop/ftp /opt/juice-shop/i18n /opt/juice-shop/uploads /opt/juice-shop/frontend/dist
+
+[Install]
+WantedBy=multi-user.target

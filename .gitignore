@@ -1,0 +1,17 @@
+# результаты прогонов трафика
+traffic/results/
+*.tsv
+
+# журналы
+*.log
+audit-*.log
+
+# выгрузки инструментов
+sqlmap-*/
+nikto-*.json
+ffuf-*.json
+
+# служебное
+.DS_Store
+*.swp
+*~
