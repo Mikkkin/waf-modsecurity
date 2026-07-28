@@ -23,21 +23,29 @@ jobs:
       - name: Развернуть WAF
         run: sudo ./deploy.sh --origin 127.0.0.1:3000 --mode On
 
+      - name: Версии для сводки
+        run: |
+          nginx -v 2>&1 | tee /tmp/versions.txt
+          dpkg-query -W -f='ModSecurity v${Version}\n' libmodsecurity3t64 >> /tmp/versions.txt
+
       - name: Заглушка вместо приложения
         run: |
           sudo cp ci/stub-origin.conf /etc/nginx/sites-enabled/stub-origin.conf
           sudo nginx -t
           sudo systemctl reload nginx
 
+      # Заголовок Host обязателен: по числовому адресу срабатывает 920350
+      # "Host header is a numeric IP address", и дымовой запрос набирает 8 баллов
+      # вместо 5, а само правило потом торчит в статистике прогона.
       - name: Дым
         run: |
           for i in $(seq 1 30); do
-            [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/)" = "200" ] && break
+            [ "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: waf.lab' http://127.0.0.1/)" = "200" ] && break
             sleep 1
           done
-          curl -sS -o /dev/null -w 'обычный запрос: %{http_code}\n' \
+          curl -sS -o /dev/null -w 'обычный запрос: %{http_code}\n' -H 'Host: waf.lab' \
             'http://127.0.0.1/rest/products/search?q=apple'
-          curl -sS -o /dev/null -w 'инъекция:       %{http_code}\n' \
+          curl -sS -o /dev/null -w 'инъекция:       %{http_code}\n' -H 'Host: waf.lab' \
             'http://127.0.0.1/rest/products/search?q=%27%29%29--'
 
       # go-ftw в режиме по умолчанию читает audit-лог, чтобы проверить, какое
@@ -74,6 +82,38 @@ jobs:
             echo "ожидалось ${expected} тестов, выполнено меньше" >&2
             exit 1
           }
+
+      - name: Сводка
+        if: always()
+        run: |
+          {
+            echo "## Регрессия WAF"
+            echo
+            echo "Среда сборки (не стенд: там Ubuntu 26.04 с более свежими пакетами):"
+            grep -oE 'ModSecurity v[0-9.]+|nginx/[0-9.]+' /tmp/versions.txt 2>/dev/null | sort -u | sed 's/^/- /' || true
+            echo "- OWASP CRS $(sed -n 's/.*ver:.OWASP_CRS\/\([0-9.]*\).*/\1/p' /etc/crs4/rules/REQUEST-949-BLOCKING-EVALUATION.conf | head -1)"
+            echo
+            echo "| Набор тестов | Пройдено |"
+            echo "|---|---|"
+            awk '/executing tests in file/ { f=$NF; next }
+                 /passed/ && f { p[f]++ }
+                 END { for (k in p) printf "| %s | %d |\n", k, p[k] }' /tmp/run.log | sort
+            echo
+            echo "**Итого: $(grep -oE 'run [0-9]+ total tests' /tmp/run.log | grep -oE '[0-9]+' | head -1) тестов, все зеленые.**"
+            echo
+            echo "Проверяется не только код ответа, но и идентификатор сработавшего правила."
+            echo
+            echo "### Правила, сработавшие за прогон"
+            echo
+            echo '```'
+            sudo grep -ao '{"transaction".*}' /var/log/modsec/audit.log 2>/dev/null \
+              | jq -rR 'fromjson? // empty
+                  | .transaction
+                  | select((.request.headers.Host // "") == "waf.lab")
+                  | .messages[]?.details.ruleId' \
+              | sort | uniq -c | sort -rn | head -20
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # Если регрессия упала, первым делом надо знать, какие правила реально
       # сработали. Иначе гадать по коду ответа.
